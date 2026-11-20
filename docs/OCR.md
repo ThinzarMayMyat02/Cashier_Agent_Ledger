@@ -9,13 +9,13 @@ Keep KBZPay-only recognition rules behind the explicit provider check.
 ## Local pipeline
 
 1. Authenticated upload accepts PNG/JPEG up to 5 MB.
-2. Apple Vision in counter/receipts/receipt_reader.swift reads English text and QR payloads locally.
+2. `LEDGER_OCR_BACKEND=auto` selects Apple Vision on macOS or native Tesseract on Linux. Explicit `vision`/`tesseract` settings are supported. Both read locally; Tesseract uses Pillow and zxing-cpp, without Swift or Node.
 3. counter/receipts/parser.py extracts receipt fields without trusting a QR as payment proof.
 4. If the Customer Name value is missing, the native reader crops the value next to that label. counter/receipts/myanmar.py calls tools/ocr/read-name.cjs with the bundled Myanmar model.
 5. The server saves a private draft, source image and original extracted fields.
 6. The owner chooses a wallet, reviews the editable form and presses Confirm. Extraction alone does not post money.
 
-Install Node.js and run npm ci --prefix tools/ocr on a new computer.
+For the Mac Vision Myanmar-name fallback, install Node.js and run npm ci --prefix tools/ocr. For Linux/cloud, install requirements.txt with Python 3.12 and native Tesseract 4+; see DEPLOY_PYTHONANYWHERE.md. Linux uses bundled English/Myanmar models and needs no npm install.
 The OCR engine and Myanmar model run locally. OCR does not send receipt images to an external service.
 The model source and license are in counter/receipts/tessdata/.
 
@@ -96,3 +96,16 @@ Both supplied Channel photos were tested through local Apple Vision extraction a
 ## Required customer names
 
 Customer Name is required for every manual and imported Cash In / Cash Out. OCR may suggest a name; when the receipt contains no customer name, the operator must supply it. Browser validation and the posting API reject blank, whitespace-only, non-text or overlong names. Names are trimmed and limited to 100 characters. Customer phone and manual provider transaction ID remain optional. Funding and expense records use their required reason/category rather than a customer name. Historical entries are preserved.
+
+
+## Linux/WSGI OCR backend
+
+`counter/receipts/tesseract_reader.py` validates image dimensions (10,000 max per side, 25 million pixels), format and EXIF rotation before reading. The shared upload limit remains 5 MB. Native Tesseract is invoked with an argument list, a private temporary image, local tessdata, one OpenMP thread and a 40-second per-pass timeout. TSV words are reconstructed as visual fragments, keeping widely separated label/value columns distinct. Missing/invalid TSV and engine errors reject extraction rather than inventing fields. Temporary images/crops are removed after extraction. QR payloads are decoded locally by zxing-cpp and remain unverified input.
+
+The English and Myanmar fast models are bundled with source/license/hash notes. No model download or external OCR API is used at import time. An English Customer Name label anchors the local Myanmar crop; taller glyph marks receive sufficient whitespace. A confident Normal Wave name may be recovered by its position before a unique transaction ID even if the masked phone is unreadable. Reference/NRC values and ambiguous names are not used as customer identities.
+
+Tesseract can render the Wave copy icon as symbols or a separated `8`, join `CashIn`, and read the date bullet as `+`. The Wave parser accepts these tested layout artifacts without substituting digits inside amounts/IDs. A contiguous 11-digit value is not truncated into a 10-digit ID. Split dates/times tolerate limited intervening nonnumeric OCR text.
+
+Actual supplied photos were tested with the portable Tesseract path: Channel Cash In/Receive principal, commission, net, IDs and dates; Normal Wave amounts/IDs/dates/names; KBZ transfer amounts/IDs/customer details and QR; KBZ utility total/date and Myanmar customer name. Some Normal Wave masked contacts remain unreadable with this engine and are left empty. Tests on the local host do not establish accuracy/performance on a live PythonAnywhere system image; run `python tools/manage.py check-ocr` and review actual receipts there before use.
+
+The WSGI import lifecycle is unchanged: authenticate → OCR outside financial locks → private draft → review and required name/wallet → explicit Confirm → atomic entry + draft consumption. No balance changes occur during OCR. See `tests/test_portable_ocr.py` and `tests/test_wsgi.py`.

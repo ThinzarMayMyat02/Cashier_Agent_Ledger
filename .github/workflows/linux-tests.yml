@@ -1,0 +1,31 @@
+name: Linux ledger and OCR tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      LEDGER_TESSERACT_CMD: /usr/bin/tesseract
+      OMP_THREAD_LIMIT: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install native OCR and Python dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr
+          python -m pip install -r requirements.txt
+      - name: Verify cloud OCR readiness
+        run: LEDGER_OCR_BACKEND=tesseract python tools/manage.py check-ocr
+      - name: Run isolated ledger, WSGI and OCR regressions
+        run: python -B -m unittest discover -s tests -t . -v

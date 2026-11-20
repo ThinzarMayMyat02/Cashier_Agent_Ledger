@@ -2,7 +2,7 @@
 
 import re
 
-TRANSACTION_NUMBER_PATTERN = r"(?m)^\s*(\d{10})(?:\s+[@©®G])?\s*$"
+TRANSACTION_NUMBER_PATTERN = r"(?m)^\s*(\d{10})(?:\s+(?:[@©®G§&]+|8))?\s*$"
 
 
 def is_channel_layout(is_cash_in, is_receive, header_amount_count):

@@ -10,3 +10,9 @@ tools/browser/node_modules/
 .DS_Store
 *.sqlite
 *.sqlite-*
+
+.venv/
+.env
+.env.*
+!.env.example
+counter-data/

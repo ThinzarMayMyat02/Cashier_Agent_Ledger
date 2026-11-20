@@ -10,16 +10,15 @@ from .wave_channel import (
 )
 
 CURRENCY_ROW_PATTERN = r"\s*([+−-]?)\s*(\d[\d,]*)\.(\d{2})\s*(?:Ks|MMK)\s*"
-TIMESTAMP_PATTERN = (
-    r"(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})\s*[•·.]?\s*(\d{1,2}:\d{2}\s*[AP]M)"
-)
+TIMESTAMP_PATTERN = r"(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})[ \t]*[•·.+]?[ \t]*(?:\n[^\d\n]*?){0,3}\s*(\d{1,2}:\d{2}\s*[AP]M)"
 
 
 def wavepay_fields(lines):
-    headings = {line.strip().lower() for line in lines}
-    is_channel_cash_in = "cash in" in headings
-    is_send = is_channel_cash_in or "send money" in headings
-    is_receive = "receive money" in headings
+    is_channel_cash_in = any(re.search(r"\bcash\s*in\b", line, re.I) for line in lines)
+    is_send = is_channel_cash_in or any(
+        re.search(r"\bsend\s+money\b", line, re.I) for line in lines
+    )
+    is_receive = any(re.search(r"\breceive\s+money\b", line, re.I) for line in lines)
     if is_send == is_receive:
         return None
 

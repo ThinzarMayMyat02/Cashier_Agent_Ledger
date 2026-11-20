@@ -18,7 +18,7 @@ Run tests: `python3 -B -m unittest discover -s tests -t . -v`.
 Sites publishing was unavailable in this execution environment: the Sites plugin's setup, source workflow and packaging helper files were not installed. This is a runnable local application, not a published Sites deployment.
 
 
-Receipt import supports PNG/JPEG up to 5 MB, selected as KBZPay or WavePay. The server reads images locally with macOS Vision and requires Apple Swift command-line tools on the Mac running the server. Vision recognizes English receipt text; a local Myanmar-name fallback is available below. QR transaction IDs are decoded as unverified data. No external OCR service receives the image. WavePay Send/Receive Money extraction reads transaction ID, total amount, customer contact and receipt time from the verified supplied layouts.
+Receipt import supports PNG/JPEG up to 5 MB, selected as KBZPay or WavePay. The server reads images locally: macOS defaults to Apple Vision; Linux uses native Tesseract with the cloud requirements and bundled models. English/Myanmar name handling and QR decoding run locally; see the OCR notes for engine-specific limits. QR transaction IDs are decoded as unverified data. No external OCR service receives the image. WavePay Send/Receive Money extraction reads transaction ID, total amount, customer contact and receipt time from the verified supplied layouts.
 
 Import creates a private draft with its source image and extracted data. It has no balance effect. The user must choose a matching wallet, check Cash In/Cash Out, complete the required customer name, review the fields and press Confirm. The review checkbox starts selected. Unused drafts expire after 24 hours and are removed on later imports. Confirmed receipt images remain in the SQLite backup with their transaction linkage. Manual provider transaction IDs are optional. Nonblank IDs are unique per wallet, including reversed originals. The posted entry retains the provider transaction ID, receipt time and import ID. Receipt time is informational. Posting uses the current open Myanmar business date.
 
@@ -41,3 +41,8 @@ Wave Channel OCR: import using WavePay and choose a wallet whose account type is
 Customer Name is required for manual and imported Cash In / Cash Out. If OCR cannot read a name or the receipt has no name, fill it before confirming. Customer phone and provider transaction ID remain optional. This rule applies to new postings; historical records are unchanged.
 
 Money inputs accept English/Myanmar digits and comma grouping. Letters, decimal points, signs and text pasted with currency labels are rejected without changing the existing amount. Whole-MMK/range validation also runs on the server.
+
+
+## Cloud hosting without a Mac
+
+Follow [the PythonAnywhere deployment guide](docs/DEPLOY_PYTHONANYWHERE.md). It includes the WSGI template, Python 3.12 environment, Linux Tesseract setup, private owner creation, existing-ledger migration, backups and free-hosting alternatives. The hosted entry point is `wsgi.py`; `server.py` stays available for local development. Cloud OCR dependencies are installed with `pip install -r requirements.txt` and additionally require native Tesseract 4+. No React/Spring Boot migration is required.

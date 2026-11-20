@@ -108,7 +108,10 @@ class Handler(BaseHTTPRequestHandler):
         limit = 7500000 if self.path == "/api/receipt/extract" else 20000
         if not 0 < size <= limit:
             raise ValueError("Request too large")
-        return json.loads(self.rfile.read(size))
+        command = json.loads(self.rfile.read(size))
+        if not isinstance(command, dict):
+            raise ValueError("Send a JSON object")
+        return command
 
     def do_POST(self):
         try:

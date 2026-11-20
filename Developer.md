@@ -20,13 +20,13 @@ For isolated development, select another database before starting:
 LEDGER_DB=/tmp/counter-development.sqlite3 PORT=8010 python3 -B server.py
 ```
 
-The supported setup uses Python 3.12+ with no third-party Python runtime packages. Local receipt extraction requires macOS, Apple's Swift command-line tools and Vision. The optional Myanmar-name fallback additionally needs Node.js and its local OCR dependencies:
+The supported setup uses Python 3.12+ with no third-party Python runtime packages. The default Mac receipt backend uses Apple's Swift command-line tools and Vision. Cloud/Linux OCR uses `requirements.txt`, native Tesseract 4+ and bundled English/Myanmar models. The optional Myanmar-name fallback additionally needs Node.js and its local OCR dependencies:
 
 ```sh
 npm ci --prefix tools/ocr
 ```
 
-The browser can run on a shop computer, Mac, phone or tablet; OCR executes on the Mac server. `HOST=0.0.0.0` enables access from a trusted local network. Internet deployment needs HTTPS and a production server arrangement.
+The browser can run on a shop computer, Mac, phone or tablet. OCR runs on the server: Vision on macOS by default, Tesseract on Linux. See [PythonAnywhere deployment](docs/DEPLOY_PYTHONANYWHERE.md) for hosting independently of the Mac. `HOST=0.0.0.0` enables access from a trusted local network. Internet deployment needs HTTPS and a production server arrangement.
 
 Run the complete automated suite:
 
@@ -60,7 +60,10 @@ The check refuses an initialized ledger, creates a fictional owner and verifies 
 ```text
 Developer.md                         Canonical developer guide
 README.md                            Operator setup and feature overview
-server.py                            Startup only
+server.py                            Local development startup
+wsgi.py                              Hosted WSGI entry point
+requirements.txt                     Cloud OCR dependencies
+deploy/pythonanywhere_wsgi.py        Hosting configuration template
 receipts.py                          Compatibility imports for receipt scripts
 counter/                             Python backend
   config.py                          Project/public asset paths
@@ -68,6 +71,7 @@ counter/                             Python backend
   database.py                        Connections and additive startup migrations
   clock.py                           Asia/Yangon business dates
   http.py                            HTTP routes and serialized write boundary
+  wsgi.py                            WSGI request/response adapter; reuses routes
   auth.py                            Login, sessions, passwords and owner guard
   team.py                            Owner-managed staff creation
   accounts.py                        Wallet configuration, funding and archival
@@ -78,7 +82,8 @@ counter/                             Python backend
   reports.py                         Date/account daily summaries
   closing.py                         Matching reconciliation and daily write lock
   receipts/
-    reader.py                        Image validation and local OCR orchestration
+    reader.py                        Backend selection and local OCR orchestration
+    tesseract_reader.py               Portable bounded OCR, QR and name regions
     receipt_reader.swift             Apple Vision text/QR extraction
     parser.py                        Generic/KBZ fields and WavePay dispatch
     contacts.py                      Adjacent customer/contact recognition
@@ -123,11 +128,15 @@ tests/                               Temporary-database regression suite
   test_wavepay_ocr.py                 Normal WavePay Send/Receive receipts
   test_wave_channel.py               Channel commission/net, names, reports, closing
   test_myanmar_ocr.py                 Local Myanmar-name fallback
+  test_portable_ocr.py                Backend selection, Linux image/OCR limits
+  test_wsgi.py                        WSGI sessions, validation and ledger flow
   test_wallet_permissions.py         Owner/staff account permissions
   test_daily_reports.py              Date/account summaries and closing balances
-tools/ocr/                           Local Tesseract.js wrapper and locked dependencies
+tools/manage.py                      OCR readiness, private owner setup and SQLite backup
+tools/ocr/                           Mac Tesseract.js wrapper and locked dependencies
 tools/browser/                       Optional Playwright money-input regression
 docs/OCR.md                          Receipt parsing evidence and extension rules
+docs/DEPLOY_PYTHONANYWHERE.md          Cloud setup, migrations and host comparisons
 docs/DEVELOPMENT.md                   Compatibility link to this guide
 ```
 
@@ -182,7 +191,7 @@ sequenceDiagram
     DB-->>Form: Updated balances
 ```
 
-`reader.extract_image(encoded, provider)` validates a PNG/JPEG up to 5 MB and returns `(image_bytes, extracted_fields)`. OCR runs outside the ledger write lock; the HTTP layer rechecks the session before storing a draft.
+`reader.extract_image(encoded, provider)` validates a PNG/JPEG up to 5 MB and returns `(image_bytes, extracted_fields)`. `LEDGER_OCR_BACKEND=auto` selects Vision on macOS and Tesseract elsewhere; `vision`/`tesseract` explicitly override it. Tesseract uses Pillow image limits, EXIF normalization, local language models, bounded subprocess calls and zxing-cpp QR decoding. It has no Swift/Node dependency. OCR runs outside the ledger write lock; the HTTP layer rechecks the session before storing a draft.
 
 `parser.parse_receipt()` handles generic/KBZ extraction and dispatches WavePay-specific layouts to `wavepay.wavepay_fields()`. Normal transfer and Channel parsing are separate modules. Keep layout rules provider-specific; an unreadable field must remain editable rather than fabricated.
 
@@ -292,3 +301,14 @@ For changes:
 5. For OCR changes, update provider-specific fixtures and [OCR notes](docs/OCR.md). Verify actual photos against a temporary database; never commit customer images.
 6. Run the full Python suite. Browser regression should cover manual and imported transactions, name validation, fee editing, both languages, provider/account selection, no pre-Confirm movement, reversal, date/wallet reports, CSV and matching closing.
 7. Review files before committing: exclude databases, backups, receipt photos, dependencies and local secrets. This directory may be a local source copy; check Git status from the intended repository before pushing.
+
+
+## 11. WSGI hosting transport
+
+`counter.wsgi.WSGIRequest` adapts the WSGI environment/streams to the existing HTTP route methods without sockets or a background development server. Each request owns its status/headers/body; there is no mutable shared request state. `application(environ, start_response)` serves that response under the host's worker. It reuses all authorization, transactions, receipt extraction and service methods from `counter.http.Handler` rather than duplicating accounting logic.
+
+The root `wsgi.py` initializes schema once on worker import. Set `LEDGER_DB` before importing it. The PythonAnywhere template keeps data outside Git, restricts `LEDGER_ALLOWED_HOSTS`, selects Tesseract and sets `LEDGER_COOKIE_SECURE=1` for HTTPS cookies behind the hosting proxy. Caller-supplied forwarded-proto headers cannot select cookie security in the WSGI adapter.
+
+Use `python tools/manage.py init-owner --name ...` before exposing a fresh ledger; `check-ocr` exercises local dependencies/models; `backup --output ...` creates a consistent private SQLite snapshot without overwriting an existing file. Full steps, free-plan limits, existing-data migration and verification are in [the deployment guide](docs/DEPLOY_PYTHONANYWHERE.md).
+
+`.github/workflows/linux-tests.yml` runs the full suite and native OCR readiness on Ubuntu/Python 3.12 for pushes/PRs, using fictional temporary databases. No customer receipts or credentials are sent to CI.
