@@ -1,4 +1,4 @@
-"""Map unverified OCR and QR data into an editable receipt draft."""
+"""Map unverified OCR and QR data into an editable transaction fields."""
 
 import base64
 import json

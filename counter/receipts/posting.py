@@ -1,11 +1,8 @@
 """Receipt-only posting validation, participating in the caller's transaction."""
 
-import json
 import re
-import time
 from dataclasses import dataclass
 from ..fees import whole_amount
-from .drafts import DRAFT_LIFETIME_SECONDS
 
 WAVE_CHANNEL_FORMAT = "wave_channel"
 
@@ -22,32 +19,32 @@ class ProviderAdjustments:
         return self.commission - self.fee
 
 
-def load_reviewed_draft(connection, user, data, account, entry_type):
-    """Return stored extraction only after ownership, expiry and review checks."""
-    import_id = data.get("receipt_import_id")
-    if not import_id:
+def validate_receipt_review(data, account, entry_type):
+    """Validate operator-reviewed metadata. OCR is assistance, never payment proof."""
+    if data.get("receipt_import_id"):
+        raise ValueError("This import form is outdated. Import the receipt again.")
+    receipt = data.get("receipt")
+    if receipt is None:
         return {}
-    draft = connection.execute(
-        "SELECT * FROM receipt_imports WHERE id=? AND user_id=? AND entry_id IS NULL AND created>?",
-        (import_id, user["id"], time.time() - DRAFT_LIFETIME_SECONDS),
-    ).fetchone()
-    if not draft:
-        raise ValueError("Receipt draft expired or already used. Import again.")
+    if not isinstance(receipt, dict):
+        raise ValueError("Invalid receipt information")
     if (
         entry_type not in ("cash_in", "cash_out")
         or not account
-        or account["provider"].lower() != draft["provider"].lower()
+        or receipt.get("provider") not in ("KBZPay", "WavePay")
+        or account["provider"].lower() != receipt["provider"].lower()
     ):
         raise ValueError("Select a wallet matching the receipt provider")
     if data.get("receipt_confirmed") is not True:
         raise ValueError("Review the receipt and confirm all details first")
-    extracted = json.loads(draft["extracted"])
-    if (
-        extracted.get("receipt_format") == WAVE_CHANNEL_FORMAT
-        and account["kind"].lower() != "channel"
+    receipt_format = receipt.get("receipt_format")
+    if receipt_format not in (None, "wave_channel"):
+        raise ValueError("Invalid receipt format")
+    if receipt_format == WAVE_CHANNEL_FORMAT and (
+        receipt["provider"] != "WavePay" or account["kind"].lower() != "channel"
     ):
         raise ValueError("Select a WavePay Channel wallet for this receipt")
-    return extracted
+    return receipt
 
 
 def validate_provider_adjustments(data, extracted, entry_type, amount):
@@ -73,8 +70,8 @@ def validate_provider_adjustments(data, extracted, entry_type, amount):
     return adjustments
 
 
-def masked_phone_from_draft(extracted):
-    """Use stored extraction rather than trusting the read-only browser input."""
+def validate_masked_phone(extracted):
+    """Accept only a valid masked contact; never infer hidden digits."""
     contact = extracted.get("masked_phone", "")
     if isinstance(contact, str) and re.fullmatch(r"[*•xX]{2,}\d{3,}", contact):
         return contact

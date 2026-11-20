@@ -13,7 +13,6 @@ from .config import PUBLIC_ROOT
 from .ledger import post_entry
 from .queries import get_shop_state
 from .reports import daily_report
-from .receipts.drafts import save_draft
 from .receipts.reader import extract_image
 from .reversals import reverse_entry
 from .team import create_staff
@@ -138,17 +137,19 @@ class Handler(BaseHTTPRequestHandler):
             if not user:
                 self.send({"error": "Please sign in"}, 401)
                 return
-        image, extracted = extract_image(data.get("image", ""), data.get("provider"))
+        _image, extracted = extract_image(data.get("image", ""), data.get("provider"))
+        del _image
+        data.pop("image", None)
+        extracted.pop("text", None)
         with database.connect() as connection:
             current_user = self.user(connection)
             if not current_user or current_user["id"] != user["id"]:
                 self.send({"error": "Please sign in"}, 401)
                 return
-            draft = save_draft(connection, user, data["provider"], image, extracted)
-        self.send(draft)
+        self.send(extracted)
 
     def write_command(self, data):
-        """Keep role checks, posting, draft consumption and close atomic."""
+        """Keep role checks, posting and close atomic."""
         with database.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             if self.path in ("/api/setup", "/api/login"):

@@ -12,7 +12,7 @@ Keep KBZPay-only recognition rules behind the explicit provider check.
 2. `LEDGER_OCR_BACKEND=auto` selects Apple Vision on macOS or native Tesseract on Linux. Explicit `vision`/`tesseract` settings are supported. Both read locally; Tesseract uses Pillow and zxing-cpp, without Swift or Node.
 3. counter/receipts/parser.py extracts receipt fields without trusting a QR as payment proof.
 4. If the Customer Name value is missing, the native reader crops the value next to that label. counter/receipts/myanmar.py calls tools/ocr/read-name.cjs with the bundled Myanmar model.
-5. The server saves a private draft, source image and original extracted fields.
+5. The server returns extracted fields without storing a picture, draft or raw OCR text.
 6. The owner chooses a wallet, reviews the editable form and presses Confirm. Extraction alone does not post money.
 
 For the Mac Vision Myanmar-name fallback, install Node.js and run npm ci --prefix tools/ocr. For Linux/cloud, install requirements.txt with Python 3.12 and native Tesseract 4+; see DEPLOY_PYTHONANYWHERE.md. Linux uses bundled English/Myanmar models and needs no npm install.
@@ -31,7 +31,7 @@ The model source and license are in counter/receipts/tessdata/.
 ## Customer contact rules
 
 Keep the complete customer phone in phone.
-Keep a masked contact in masked_phone in the extraction/draft and customer_phone_masked on the posted entry.
+Keep a masked contact in masked_phone in the temporary extraction and customer_phone_masked on the posted entry.
 Do not invent missing digits or use a masked contact as a unique customer identity.
 History displays the complete phone when supplied, otherwise the stored masked phone.
 A missing/ambiguous name stays editable. The local Myanmar fallback rejects low-confidence results.
@@ -45,7 +45,7 @@ The operator always selects the wallet account.
 Manual and imported postings share the same agent cash/float rules.
 Receipt time is evidence. Business date is the current open Myanmar day.
 Provider transaction IDs are optional for manual entry and deduplicated per wallet when supplied.
-Retain the source draft so corrections can be traced to the original extraction.
+The source image is temporary only. Confirm stores the reviewed transaction fields; there is no retained receipt evidence.
 
 ## WavePay Send/Receive Money rules
 
@@ -64,7 +64,7 @@ Verify all extracted fields, no balance change before Confirm, duplicate protect
 
 - counter/receipts/parser.py handles field recognition and KBZPay-only fallbacks.
 - counter/receipts/reader.py coordinates native OCR and the Myanmar fallback.
-- counter/receipts/posting.py validates draft review, provider adjustments and stored masked contacts.
+- counter/receipts/posting.py validates receipt review, provider adjustments and masked contact validation.
 - counter/ledger.py orchestrates validation, calculation and atomic posting with receipt linkage.
 - public/js/features/transactions.js coordinates form opening/submission.
 - public/js/features/transaction-form/ contains template markup, receipt field population and display-only fee/movement previews.
@@ -87,7 +87,7 @@ Channel rules:
 - The last 10-digit value before the date is the transaction ID in these verified layouts. Cash In has a destination phone before it. Receive Money may have a reference number before it; that reference is not a transaction ID or phone. Masked NRC is not a customer name. Ambiguous identifier counts are left blank.
 - Preserve the printed phone digits. Do not invent a leading zero or unmask information.
 - Check repeated principal, commission and wallet-net arithmetic. An incomplete/conflicting receipt requires operator direction selection and correction.
-- Provider commission and provider fee are editable whole-MMK review fields, authorized only for a stored Channel receipt draft. Missing adjustment fields are rejected. The original image/extraction is retained. Corrections affect the posting preview; the original receipt net remains read-only for comparison.
+- Provider commission and provider fee are editable whole-MMK review fields, validated against the selected Channel account and explicitly confirmed receipt metadata. Missing adjustment fields are rejected. The original image and extraction are temporary and are discarded when the form closes. Corrections affect the posting preview; the original receipt net remains read-only for comparison.
 - Entries store provider_commission, provider_fee and receipt_format alongside exact cash/wallet deltas. Additive migrations default old provider adjustments to zero without recomputing old entries. Reversals negate commission, provider fee and the original balance changes exactly.
 - Daily Summary, Overview and history expose commission separately. Daily Closing CSV includes provider commission and provider fee per wallet and in its total row. Opening/closing balances sum actual posted wallet deltas.
 
@@ -108,4 +108,4 @@ Tesseract can render the Wave copy icon as symbols or a separated `8`, join `Cas
 
 Actual supplied photos were tested with the portable Tesseract path: Channel Cash In/Receive principal, commission, net, IDs and dates; Normal Wave amounts/IDs/dates/names; KBZ transfer amounts/IDs/customer details and QR; KBZ utility total/date and Myanmar customer name. Some Normal Wave masked contacts remain unreadable with this engine and are left empty. Tests on the local host do not establish accuracy/performance on a live PythonAnywhere system image; run `python tools/manage.py check-ocr` and review actual receipts there before use.
 
-The WSGI import lifecycle is unchanged: authenticate → OCR outside financial locks → private draft → review and required name/wallet → explicit Confirm → atomic entry + draft consumption. No balance changes occur during OCR. See `tests/test_portable_ocr.py` and `tests/test_wsgi.py`.
+The WSGI import lifecycle is unchanged: authenticate → OCR outside financial locks → temporary fields → review and required name/wallet → explicit Confirm → atomic transaction entry. No balance changes occur during OCR. See `tests/test_portable_ocr.py` and `tests/test_wsgi.py`.

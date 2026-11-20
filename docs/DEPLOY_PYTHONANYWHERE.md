@@ -10,7 +10,7 @@ PythonAnywhere currently provides 512 MiB disk space, one web app with one web w
 
 The published 100 CPU-second allowance applies to consoles/scheduled tasks, not currently to web apps. Console setup and OCR checks may therefore be slowed by the allowance. An OCR request still occupies the single web worker and can delay other requests. [CPU allowance](https://help.pythonanywhere.com/pages/WhatAreCPUSeconds/)
 
-Uploaded receipts are retained in SQLite. A 512 MiB account also holds the source checkout, Git history, virtualenv and models; do not assume the entire quota is available to receipts. Monitor Files/disk usage and download backups regularly. The app accepts images up to 5 MB, so a large receipt collection will outgrow this plan.
+Receipt photos are used temporarily for OCR and are not retained in SQLite or a drafts table. Confirmed transaction fields are stored. The 512 MiB quota still covers source, Git history, dependencies, models, financial records and backups. Monitor disk usage and download backups regularly. Legacy receipt image/draft storage is removed on startup; historical backups made before that change can still contain images.
 
 ## 1. Create the account and clone the source
 

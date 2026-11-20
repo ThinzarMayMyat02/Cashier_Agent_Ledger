@@ -42,7 +42,7 @@ def channel_receipt(incoming=False):
 
 
 class WaveChannelTests(LedgerFixture):
-    def draft(self, incoming=False):
+    def extraction(self, incoming=False):
         extracted = channel_receipt(incoming)
         before = self.counts()
         with patch("counter.http.extract_image", return_value=(b"fixture", extracted)):
@@ -57,7 +57,11 @@ class WaveChannelTests(LedgerFixture):
         return dict(
             customer="Test Customer",
             provider_transaction_id=draft["provider_transaction_id"],
-            receipt_import_id=draft["import_id"],
+            receipt={
+                key: draft[key]
+                for key in ("provider", "receipt_format", "masked_phone")
+                if key in draft
+            },
             receipt_confirmed=True,
             provider_commission=draft["provider_commission"],
             provider_fee=draft["provider_fee"],
@@ -82,7 +86,7 @@ class WaveChannelTests(LedgerFixture):
     def test_post_report_reverse_and_close(self):
         self.entry("channel-opening", "funds_in", 100000, 5)
         before = self.counts()
-        draft = self.draft()
+        draft = self.extraction()
         payload = self.payload(draft)
         self.assertEqual(
             self.entry("wrong-kind", "cash_in", 30000, 4, **payload)[0], 400
@@ -95,7 +99,7 @@ class WaveChannelTests(LedgerFixture):
         row = next(e for e in state["entries"] if e["id"] == "channel-in")
         self.assertEqual(row["fee"], 100)
         self.assertEqual(row["provider_commission"], 9)
-        received = self.draft(True)
+        received = self.extraction(True)
         self.assertEqual(
             self.entry("channel-out", "cash_out", 600000, 5, **self.payload(received))[
                 0
@@ -135,8 +139,8 @@ class WaveChannelTests(LedgerFixture):
             self.assertEqual(report["totals"][key], 0)
         self.assertEqual(self.req("closing", counts=self.counts())[0], 200)
 
-    def test_missing_customer_is_rejected_without_consuming_draft(self):
-        draft = self.draft(True)
+    def test_missing_customer_is_rejected_without_posting(self):
+        draft = self.extraction(True)
         payload = self.payload(draft)
         before = self.counts()
         for name in ("", "   ", "\t", None):
@@ -169,7 +173,7 @@ class WaveChannelTests(LedgerFixture):
     def test_provider_fee_and_commission_are_wallet_only_and_reversible(self):
         self.entry("opening", "funds_in", 100000, 5)
         before = self.counts()
-        draft = self.draft()
+        draft = self.extraction()
         payload = self.payload(draft)
         payload["provider_fee"] = 5
         payload["provider_commission"] = -1

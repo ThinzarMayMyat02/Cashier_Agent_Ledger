@@ -5,6 +5,11 @@ import { $ } from "../core/format.js";
 import { entryForm } from "./transactions.js";
 
 export function importReceipt() {
+  const controller = new AbortController();
+  let cancelled = false;
+  let readyForReview = false;
+  let reader;
+
   openForm(
     "Import receipt photo",
     select(
@@ -25,20 +30,53 @@ export function importReceipt() {
       if (!file || file.size > 5 * 1024 * 1024)
         throw Error("Choose a PNG or JPEG image up to 5 MB");
       $("#importstatus").textContent = "Reading receipt…";
-      const image = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
+      let image = await new Promise((resolve, reject) => {
+        reader = new FileReader();
         reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onabort = () =>
+          reject(new DOMException("Cancelled", "AbortError"));
         reader.onerror = () => reject(Error("Could not read image"));
         reader.readAsDataURL(file);
       });
-      const draft = await api("receipt/extract", {
-        provider: d.provider,
-        image,
-      });
-      draft.previewUrl = URL.createObjectURL(file);
-      // openForm closes the import modal after this callback returns.
-      setTimeout(() => entryForm("cash_in", draft), 0);
+      let extraction;
+      try {
+        extraction = await api(
+          "receipt/extract",
+          { provider: d.provider, image },
+          controller.signal,
+        );
+      } finally {
+        image = "";
+        reader.onload = reader.onerror = reader.onabort = null;
+        reader = null;
+      }
+      if (cancelled) return false;
+      extraction.previewUrl = URL.createObjectURL(file);
+      readyForReview = true;
+      // Wait for the upload close event before attaching review cleanup handlers.
+      $("#modal").addEventListener(
+        "close",
+        () => {
+          setTimeout(() => entryForm("cash_in", extraction), 0);
+        },
+        { once: true },
+      );
     },
+    { successMessage: null },
   );
   $("#save").textContent = "Read receipt";
+  const uploadForm = $("#form");
+  $("#modal").addEventListener(
+    "close",
+    () => {
+      if (!readyForReview) {
+        cancelled = true;
+        controller.abort();
+        if (reader?.readyState === FileReader.LOADING) reader.abort();
+      }
+      uploadForm.reset();
+      uploadForm.remove();
+    },
+    { once: true },
+  );
 }

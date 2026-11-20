@@ -30,7 +30,6 @@ def initialize():
             ("collected_fee", "INTEGER"),
             ("business_date", "TEXT"),
             ("provider_transaction_id", "TEXT"),
-            ("receipt_import_id", "TEXT"),
             ("receipt_time", "TEXT"),
             ("accounting_rule", "TEXT"),
             ("customer_phone_masked", "TEXT"),
@@ -48,9 +47,9 @@ def initialize():
         connection.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS provider_receipt ON entries(account_id,provider_transaction_id) WHERE provider_transaction_id IS NOT NULL AND provider_transaction_id<>'' AND reversal_of IS NULL"
         )
-        connection.execute(
-            "CREATE TABLE IF NOT EXISTS receipt_imports(id TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id),provider TEXT NOT NULL,image BLOB NOT NULL,extracted TEXT NOT NULL,created REAL NOT NULL,entry_id TEXT UNIQUE REFERENCES entries(id))"
-        )
+        # Retire legacy image/draft storage without changing financial entries.
+        connection.execute("PRAGMA secure_delete=ON")
+        connection.execute("DROP TABLE IF EXISTS receipt_imports")
         closing_columns = {
             row["name"] for row in connection.execute("PRAGMA table_info(closings)")
         }

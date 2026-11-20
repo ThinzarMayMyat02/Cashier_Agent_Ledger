@@ -5,7 +5,7 @@ import { money, esc } from "../../core/format.js";
 export function renderTransactionFields({
   entryType,
   isCustomerTransaction,
-  receiptDraft,
+  receiptExtraction,
   walletAccounts,
   customerSuggestions,
 }) {
@@ -19,7 +19,7 @@ export function renderTransactionFields({
       )
       .join("");
   return (
-    (receiptDraft
+    (receiptExtraction
       ? '<div class="infobox"><img class="receipt-preview" alt="Receipt preview"></div>'
       : "") +
     (isCustomerTransaction
@@ -56,21 +56,21 @@ export function renderTransactionFields({
           "Provider transaction ID (optional)",
           "provider_transaction_id",
           "text",
-          receiptDraft?.provider_transaction_id || "",
+          receiptExtraction?.provider_transaction_id || "",
           'maxlength="80"',
         ) +
         field(
           "Receipt time (optional)",
           "receipt_time",
           "text",
-          receiptDraft?.receipt_time || "",
+          receiptExtraction?.receipt_time || "",
           'maxlength="80"',
         )
       : "") +
     field(
-      receiptDraft?.receipt_format === "wave_channel"
+      receiptExtraction?.receipt_format === "wave_channel"
         ? "Customer amount · MMK"
-        : receiptDraft
+        : receiptExtraction
           ? "Total amount · MMK"
           : "Amount · MMK",
       "amount",
@@ -78,35 +78,35 @@ export function renderTransactionFields({
       "",
       'required min="1" max="100000000000" step="1" inputmode="numeric"',
     ) +
-    (receiptDraft?.receipt_format === "wave_channel"
+    (receiptExtraction?.receipt_format === "wave_channel"
       ? field(
           "Provider commission · MMK",
           "provider_commission",
           "number",
-          receiptDraft.provider_commission ?? 0,
+          receiptExtraction.provider_commission ?? 0,
           'required min="0" step="1"',
         ) +
         field(
           "Provider fee · MMK",
           "provider_fee",
           "number",
-          receiptDraft.provider_fee ?? 0,
+          receiptExtraction.provider_fee ?? 0,
           'required min="0" step="1"',
         ) +
         field(
           "Receipt wallet movement · MMK",
           "receipt_wallet_delta",
           "text",
-          money(receiptDraft.receipt_wallet_delta ?? 0),
+          money(receiptExtraction.receipt_wallet_delta ?? 0),
           "readonly",
         )
       : "") +
-    (receiptDraft && receiptDraft.masked_phone
+    (receiptExtraction && receiptExtraction.masked_phone
       ? field(
           "Masked phone from receipt",
           "masked_phone",
           "text",
-          receiptDraft.masked_phone,
+          receiptExtraction.masked_phone,
           "readonly data-no-i18n",
         )
       : "") +
@@ -138,7 +138,7 @@ export function renderTransactionFields({
       "",
       isCustomerTransaction ? "" : "required",
     ) +
-    (receiptDraft
+    (receiptExtraction
       ? '<label class="receipt-confirm"><input type="checkbox" name="receipt_confirmed" checked required> <span>I checked this is the shop wallet receipt, amount, wallet and cash direction.</span></label>'
       : "")
   );

@@ -10,7 +10,7 @@ export function calculateSuggestedFee(entryType, amount) {
   return Math.floor((amount + 125) / 250);
 }
 
-export function bindTransactionPreview(receiptDraft, walletAccounts) {
+export function bindTransactionPreview(receiptExtraction, walletAccounts) {
   const updatePreview = (resetCollectedFee) => {
     const entryType = $("#f_type").value,
       principal = parseMoney($("#f_amount").value),
@@ -31,7 +31,7 @@ export function bindTransactionPreview(receiptDraft, walletAccounts) {
     }
     const walletDelta =
       (entryType === "cash_in" ? -principal : principal) +
-      (receiptDraft?.receipt_format === "wave_channel"
+      (receiptExtraction?.receipt_format === "wave_channel"
         ? parseMoney($("#f_provider_commission").value) -
           parseMoney($("#f_provider_fee").value)
         : 0);
@@ -63,7 +63,7 @@ export function bindTransactionPreview(receiptDraft, walletAccounts) {
   $("#f_account_id").onchange = () => updatePreview(true);
   $("#f_fee").oninput = () => updatePreview(false);
   $("#f_fee_mode").onchange = () => updatePreview(false);
-  if (receiptDraft?.receipt_format === "wave_channel") {
+  if (receiptExtraction?.receipt_format === "wave_channel") {
     $("#f_provider_commission").oninput = () => updatePreview(false);
     $("#f_provider_fee").oninput = () => updatePreview(false);
   }

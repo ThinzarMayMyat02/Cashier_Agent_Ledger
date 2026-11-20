@@ -90,7 +90,6 @@ counter/                             Python backend
     wavepay.py                       Wave layout dispatch and normal transfer fields
     wave_channel.py                  Channel principal/commission/net interpretation
     myanmar.py                       Optional local Myanmar name fallback
-    drafts.py                        Private draft storage and expiration policy
     posting.py                       Draft review and provider-adjustment validation
     tessdata/                        Local Myanmar model and license
 public/                              Browser frontend, served directly
@@ -108,9 +107,9 @@ public/                              Browser frontend, served directly
       transactions.js                Form opening, customer suggestions and submit
       transaction-form/
         template.js                  Field markup; stable form/API names
-        receipt-review.js            Draft population, eligible wallets, image cleanup
+        receipt-review.js            Temporary OCR field population, eligible wallets, image cleanup
         preview.js                   Suggested fee and displayed cash/wallet effects
-      receipts.js                    Upload image and request an unposted draft
+      receipts.js                    Upload image and request temporary OCR fields
       reports.js                     Summary filters, shared columns and closing CSV
       auth.js                        Owner/staff sign-in
       overview.js                    Cash, wallet, fee and commission dashboard
@@ -124,7 +123,7 @@ tests/                               Temporary-database regression suite
   support.py                         HTTP fixture and fictional opening funds
   test_ledger.py                     End-to-end ledger/role regression
   test_accounting.py                 Fee boundaries, balance rules, races, reversals
-  test_receipts.py                   Parsing, private drafts and reviewed imports
+  test_receipts.py                   Parsing and explicitly confirmed imports
   test_wavepay_ocr.py                 Normal WavePay Send/Receive receipts
   test_wave_channel.py               Channel commission/net, names, reports, closing
   test_myanmar_ocr.py                 Local Myanmar-name fallback
@@ -155,7 +154,7 @@ flowchart TD
     CHECK -->|validation error| ROLLBACK[Rollback entire command]
 ```
 
-`Handler.write_command()` owns the write transaction. Feature services receive `(connection, user, data)` and never commit independently. A balance check, entry insertion and receipt consumption therefore succeed or fail together. Keep this boundary when adding features.
+`Handler.write_command()` owns the write transaction. Feature services receive `(connection, user, data)` and never commit independently. A balance check, entry insertion and receipt review therefore succeed or fail together. Keep this boundary when adding features.
 
 `get_shop_state()` is a read model, not an accounting engine. Balances are derived from stored deltas. Browser previews are advisory; the backend validates every command.
 
@@ -167,9 +166,9 @@ flowchart TD
 4. Confirm invokes `prepareEntryCommand()` to trim the name, normalize amounts, attach the stable command ID and confirm any separately collected cash fee.
 5. `POST /api/entry` reaches `ledger.post_entry()` under the write lock.
 6. The service validates the day/type/name/role/account/reference, calculates effects, checks cash and selected-wallet balances, and creates one complete record.
-7. `_save_entry()` inserts named SQL parameters and consumes an import draft if present. The HTTP layer commits and returns a fresh snapshot.
+7. `_save_entry()` inserts named SQL parameters. The HTTP layer commits and returns a fresh snapshot.
 
-`entryForm()` and `reverseEntry()` retain their public names because `app.js` exposes them for existing buttons. Internal variables use descriptive names such as `receiptDraft`, `principal`, `walletDelta` and `customerSuggestions`. Form names and REST keys retain the established wire contract.
+`entryForm()` and `reverseEntry()` retain their public names because `app.js` exposes them for existing buttons. Internal variables use descriptive names such as `receiptExtraction`, `principal`, `walletDelta` and `customerSuggestions`. Form names and REST keys retain the established wire contract.
 
 ## 5. Receipt import flow
 
@@ -182,22 +181,21 @@ sequenceDiagram
     Operator->>Form: Choose provider and PNG/JPEG
     Form->>OCR: POST /api/receipt/extract
     OCR->>OCR: Read image and parse provider layout
-    OCR->>DB: Save private source image + extraction draft
-    OCR-->>Form: Suggested fields + import_id
+    OCR-->>Form: Temporary suggested fields
     Note over Form,DB: No balance movement during extraction or editing
     Operator->>Form: Select wallet, complete name, review and Confirm
     Form->>DB: POST /api/entry via serialized posting service
-    DB->>DB: Validate, insert entry, consume draft, commit
+    DB->>DB: Validate, insert confirmed entry, commit
     DB-->>Form: Updated balances
 ```
 
-`reader.extract_image(encoded, provider)` validates a PNG/JPEG up to 5 MB and returns `(image_bytes, extracted_fields)`. `LEDGER_OCR_BACKEND=auto` selects Vision on macOS and Tesseract elsewhere; `vision`/`tesseract` explicitly override it. Tesseract uses Pillow image limits, EXIF normalization, local language models, bounded subprocess calls and zxing-cpp QR decoding. It has no Swift/Node dependency. OCR runs outside the ledger write lock; the HTTP layer rechecks the session before storing a draft.
+`reader.extract_image(encoded, provider)` validates a PNG/JPEG up to 5 MB and returns `(image_bytes, extracted_fields)`. `LEDGER_OCR_BACKEND=auto` selects Vision on macOS and Tesseract elsewhere; `vision`/`tesseract` explicitly override it. Tesseract uses Pillow image limits, EXIF normalization, local language models, bounded subprocess calls and zxing-cpp QR decoding. It has no Swift/Node dependency. OCR runs outside the ledger write lock; the HTTP layer rechecks the session before returning fields.
 
 `parser.parse_receipt()` handles generic/KBZ extraction and dispatches WavePay-specific layouts to `wavepay.wavepay_fields()`. Normal transfer and Channel parsing are separate modules. Keep layout rules provider-specific; an unreadable field must remain editable rather than fabricated.
 
-`drafts.save_draft()` stores the image/extraction and cleans expired unused drafts. `DRAFT_LIFETIME_SECONDS` is the shared 24-hour policy for storage and posting validation. Confirmed draft evidence remains linked to its entry.
+No server/browser draft storage exists. `posting.validate_receipt_review()` validates submitted review metadata, explicit confirmation and provider/account kind. `validate_masked_phone()` validates the supplied masked contact. All fields are operator input, not proof of payment. Cancel clears preview/form references and aborts pending extraction; the server finishes any already-running bounded OCR and removes its temporary files. Only Confirm writes a ledger entry.
 
-`posting.load_reviewed_draft()` validates the draft owner, expiry, unused status, explicit confirmation and provider/account kind. `masked_phone_from_draft()` reads the stored extraction rather than trusting a read-only browser field.
+On startup, the legacy receipt_imports table is dropped with secure_delete enabled, preserving financial entries. Legacy receipt_import_id columns, if present on old entries, are inert compatibility fields. Existing historical backups are not rewritten. SQLite may retain reusable free pages after the table is dropped; shrinking the file requires a separately scheduled VACUUM with enough disk space.
 
 Channel import requires a WavePay account with kind `Channel`. The operator always chooses the wallet. A negative shop-wallet receipt suggests Cash In; positive suggests Cash Out. Ambiguous direction stays selectable for review. If no customer name appears, the operator must enter one before saving.
 
@@ -213,7 +211,7 @@ Every amount is a whole-MMK integer. These terms must remain distinct:
 | Provider commission | Wallet income from provider | `provider_commission` |
 | Provider fee | Wallet expense charged by provider | `provider_fee` |
 | Actual cash/wallet movement | Confirmed balance effects | `cash_delta`, `wallet_delta` |
-| Receipt wallet movement | Original imported evidence; may differ from principal | Stored draft extraction |
+| Receipt wallet movement | Original imported evidence; may differ from principal | Temporary browser form only |
 
 | Agent transaction | Shop cash delta | Wallet delta before provider adjustments |
 |---|---:|---:|
@@ -224,7 +222,7 @@ Channel wallet delta adds `provider_commission − provider_fee`. Provider adjus
 
 Example: Cash In principal 30,000, collected shop fee 100, commission 9 and provider fee 0 gives cash +30,100 and wallet −29,991. Income is shop fee 100 plus commission 9. Do not post 29,991 as customer principal.
 
-`fees.calculate_fee()` is the authoritative suggestion. `fees.prepare_posting_amounts()` returns immutable `PostingAmounts`. `receipts.posting.validate_provider_adjustments()` returns immutable `ProviderAdjustments`; its wallet delta is applied before balance validation. Only a reviewed Channel draft authorizes nonzero provider adjustments.
+`fees.calculate_fee()` is the authoritative suggestion. `fees.prepare_posting_amounts()` returns immutable `PostingAmounts`. `receipts.posting.validate_provider_adjustments()` returns immutable `ProviderAdjustments`; its wallet delta is applied before balance validation. Only a reviewed Channel receipt authorizes nonzero provider adjustments.
 
 Customer Name is trimmed, required for Cash In/Out, limited to 100 characters and rejects control characters. Funding/expense records require their reason/category rather than a customer name. A fee override reason is optional. Do not infer a full phone from a masked number.
 
@@ -247,9 +245,9 @@ Customer Name is trimmed, required for Cash In/Out, limited to 100 characters an
 | Wallets/staff | `accounts.save_account()`, `team.create_staff()` |
 | Time/fees | `clock.business_day()`, `fees.whole_amount()`, `calculate_fee()`, `prepare_posting_amounts()` |
 | Posting | `ledger.post_entry()`, `_validate_customer_name()`, `_find_active_account()`, `_ensure_unique_provider_reference()`, `_ensure_sufficient_balances()`, `_save_entry()` |
-| Receipt posting | `load_reviewed_draft()`, `validate_provider_adjustments()`, `masked_phone_from_draft()` |
+| Receipt posting | `validate_receipt_review()`, `validate_provider_adjustments()`, `validate_masked_phone()` |
 | OCR/parsing | `reader.extract_image()`, `parser.parse_receipt()`, `contacts.customer_from_contact_pair()`, `wavepay.wavepay_fields()`, `wave_channel.parse_channel_receipt()` |
-| OCR fallback/drafts | `myanmar.read_customer_name()`, `drafts.save_draft()` |
+| OCR fallback | `myanmar.read_customer_name()` |
 | Read/reverse/report/close | `queries.get_shop_state()`, `reversals.reverse_entry()`, `reports.daily_report()`, `closing.require_open_day()`, `close_day()` |
 
 ## 9. REST contracts
@@ -263,7 +261,7 @@ Customer Name is trimmed, required for Cash In/Out, limited to 100 characters an
 | `POST /api/staff` | Owner staff creation |
 | `POST /api/entry` | Cash In/Out, expense or owner funding |
 | `POST /api/reverse` | Owner reversal with reason |
-| `POST /api/receipt/extract` | Authenticated private draft without a posting |
+| `POST /api/receipt/extract` | Temporary extraction without database writes |
 | `GET /api/reports/daily?date=YYYY-MM-DD&account_id=ID` | Daily report; omit account_id for all wallets |
 | `POST /api/closing` | Matching counts and day lock |
 
@@ -282,7 +280,7 @@ Example manual Cash In command:
 }
 ```
 
-An imported command additionally supplies `receipt_import_id`, `receipt_confirmed: true`, and optionally edited `receipt_time`/provider transaction ID. Channel commands must explicitly include reviewed `provider_commission` and `provider_fee`. A read-only original receipt wallet delta is evidence, not an authoritative request amount. Separately collected Cash Out fees send `fee_mode: "separate"` and matching `fee_cash_received`; deduct mode uses `fee_mode: "deduct"`.
+An imported command additionally supplies `receipt: {provider, receipt_format, masked_phone}`, `receipt_confirmed: true`, and optionally edited `receipt_time`/provider transaction ID. Channel commands must explicitly include reviewed `provider_commission` and `provider_fee`. A read-only original receipt wallet delta is evidence, not an authoritative request amount. Separately collected Cash Out fees send `fee_mode: "separate"` and matching `fee_cash_received`; deduct mode uses `fee_mode: "deduct"`.
 
 Provider transaction IDs are strings, preserving leading zeroes, and nonblank IDs are unique per wallet even after reversal. Receipt time is evidence; business date is the current open Myanmar day. Failed validation returns HTTP 400 and rolls back the command.
 
@@ -296,7 +294,7 @@ For changes:
 
 1. Find the owning module in the structure/index above.
 2. Keep calculation code separate from templates and HTTP transport. Use descriptive internal names; retain existing API keys and public button handlers unless migrating callers together.
-3. Keep role checks, balance validation, posting and receipt consumption under the existing serialized transaction.
+3. Keep role checks, balance validation, posting and receipt review under the existing serialized transaction.
 4. If fee policy changes, update both server policy and browser preview and run boundary tests.
 5. For OCR changes, update provider-specific fixtures and [OCR notes](docs/OCR.md). Verify actual photos against a temporary database; never commit customer images.
 6. Run the full Python suite. Browser regression should cover manual and imported transactions, name validation, fee editing, both languages, provider/account selection, no pre-Confirm movement, reversal, date/wallet reports, CSV and matching closing.
@@ -312,3 +310,5 @@ The root `wsgi.py` initializes schema once on worker import. Set `LEDGER_DB` bef
 Use `python tools/manage.py init-owner --name ...` before exposing a fresh ledger; `check-ocr` exercises local dependencies/models; `backup --output ...` creates a consistent private SQLite snapshot without overwriting an existing file. Full steps, free-plan limits, existing-data migration and verification are in [the deployment guide](docs/DEPLOY_PYTHONANYWHERE.md).
 
 `.github/workflows/linux-tests.yml` runs the full suite and native OCR readiness on Ubuntu/Python 3.12 for pushes/PRs, using fictional temporary databases. No customer receipts or credentials are sent to CI.
+
+Run `COUNTER_TEST_URL=http://127.0.0.1:PORT npm run test:receipt-cancel --prefix tools/browser` against a new temporary ledger to verify cancellation during/after OCR, preview revocation, no late reopening and no financial writes.

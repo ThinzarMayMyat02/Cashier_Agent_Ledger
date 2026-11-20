@@ -1,16 +1,16 @@
-// Populate an unposted receipt draft; the operator always selects the wallet.
+// Populate temporary OCR fields; the operator always selects the wallet.
 import { $ } from "../../core/format.js";
 import { formatMoneyInput } from "../../components/money-input.js";
 
-export function populateReceiptFields(receiptDraft, walletAccounts) {
+export function populateReceiptFields(receiptExtraction, walletAccounts) {
   $("#f_type").insertAdjacentHTML(
     "afterbegin",
     '<option value="">Choose Cash In or Cash Out</option>',
   );
-  $("#f_type").value = receiptDraft.transaction_type || "";
+  $("#f_type").value = receiptExtraction.transaction_type || "";
   $("#f_type").required = true;
-  $("#f_customer").value = receiptDraft.customer || "";
-  $("#f_phone").value = receiptDraft.phone || "";
+  $("#f_customer").value = receiptExtraction.customer || "";
+  $("#f_phone").value = receiptExtraction.phone || "";
   $("#f_account_id").insertAdjacentHTML(
     "afterbegin",
     '<option value="">Choose wallet account</option>',
@@ -23,19 +23,28 @@ export function populateReceiptFields(receiptDraft, walletAccounts) {
     );
     if (
       account &&
-      (account.provider.toLowerCase() !== receiptDraft.provider.toLowerCase() ||
-        (receiptDraft.account_kind &&
+      (account.provider.toLowerCase() !==
+        receiptExtraction.provider.toLowerCase() ||
+        (receiptExtraction.account_kind &&
           account.kind.toLowerCase() !==
-            receiptDraft.account_kind.toLowerCase()))
+            receiptExtraction.account_kind.toLowerCase()))
     )
       option.disabled = true;
   }
-  $("#f_amount").value = receiptDraft.amount || "";
+  $("#f_amount").value = receiptExtraction.amount || "";
   formatMoneyInput($("#f_amount"));
-  $("#modal .receipt-preview").src = receiptDraft.previewUrl;
+  $("#modal .receipt-preview").src = receiptExtraction.previewUrl;
+  const reviewForm = $("#form");
   $("#modal").addEventListener(
     "close",
-    () => URL.revokeObjectURL(receiptDraft.previewUrl),
+    () => {
+      URL.revokeObjectURL(receiptExtraction.previewUrl);
+      reviewForm.querySelector(".receipt-preview")?.removeAttribute("src");
+      reviewForm.reset();
+      reviewForm.remove();
+      for (const key of Object.keys(receiptExtraction))
+        delete receiptExtraction[key];
+    },
     { once: true },
   );
 }

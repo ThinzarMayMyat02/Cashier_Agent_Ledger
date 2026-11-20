@@ -2,7 +2,8 @@
   "name": "counter-browser-checks",
   "private": true,
   "scripts": {
-    "test:money": "node money-input.cjs"
+    "test:money": "node money-input.cjs",
+    "test:receipt-cancel": "node receipt-cancel.cjs"
   },
   "devDependencies": {
     "playwright": "1.65.1"

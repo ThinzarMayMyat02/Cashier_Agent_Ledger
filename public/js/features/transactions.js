@@ -8,7 +8,7 @@ import { renderTransactionFields } from "./transaction-form/template.js";
 import { populateReceiptFields } from "./transaction-form/receipt-review.js";
 import { bindTransactionPreview } from "./transaction-form/preview.js";
 
-export function entryForm(entryType, receiptDraft = null) {
+export function entryForm(entryType, receiptExtraction = null) {
   if (
     ["funds_in", "funds_out"].includes(entryType) &&
     store.data.user.role !== "owner"
@@ -21,11 +21,11 @@ export function entryForm(entryType, receiptDraft = null) {
   const walletAccounts = store.data.accounts;
   const customerSuggestions = getCustomerSuggestions(store.data.entries);
   openForm(
-    receiptDraft ? "Imported wallet transaction" : title(entryType),
+    receiptExtraction ? "Imported wallet transaction" : title(entryType),
     renderTransactionFields({
       entryType,
       isCustomerTransaction,
-      receiptDraft,
+      receiptExtraction,
       walletAccounts,
       customerSuggestions,
     }),
@@ -34,7 +34,7 @@ export function entryForm(entryType, receiptDraft = null) {
         formData,
         entryType,
         transactionId,
-        receiptDraft,
+        receiptExtraction,
       );
       store.data = await api("entry", command);
     },
@@ -48,8 +48,9 @@ export function entryForm(entryType, receiptDraft = null) {
     );
     if (customer) $("#f_customer").value = customer.customer;
   };
-  if (receiptDraft) populateReceiptFields(receiptDraft, walletAccounts);
-  bindTransactionPreview(receiptDraft, walletAccounts);
+  if (receiptExtraction)
+    populateReceiptFields(receiptExtraction, walletAccounts);
+  bindTransactionPreview(receiptExtraction, walletAccounts);
 }
 
 function getCustomerSuggestions(entries) {
@@ -63,7 +64,12 @@ function getCustomerSuggestions(entries) {
   ];
 }
 
-function prepareEntryCommand(formData, entryType, transactionId, receiptDraft) {
+function prepareEntryCommand(
+  formData,
+  entryType,
+  transactionId,
+  receiptExtraction,
+) {
   const isCustomerTransaction = ["cash_in", "cash_out"].includes(entryType);
   const command = {
     ...formData,
@@ -78,8 +84,12 @@ function prepareEntryCommand(formData, entryType, transactionId, receiptDraft) {
     if (command.type === "cash_out" && command.fee_mode === "separate")
       command.fee_cash_received = command.fee;
   }
-  if (receiptDraft) {
-    command.receipt_import_id = receiptDraft.import_id;
+  if (receiptExtraction) {
+    command.receipt = {
+      provider: receiptExtraction.provider,
+      receipt_format: receiptExtraction.receipt_format,
+      masked_phone: receiptExtraction.masked_phone || "",
+    };
     command.receipt_confirmed = command.receipt_confirmed === "on";
   }
   return command;

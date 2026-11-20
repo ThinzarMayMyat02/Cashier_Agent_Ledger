@@ -71,8 +71,8 @@ export const interfaceTranslations = {
     "ဆိုင်အကောင့် ငွေအတိုးအလျော့ကို စစ်ပြီး ငွေသွင်း / ငွေထုတ် ရွေးပါ။",
   "This provider transaction ID is already recorded for this account":
     "ဤငွေလွှဲလုပ်ငန်းစဉ်အမှတ်ကို အကောင့်တွင် စာရင်းတင်ပြီးဖြစ်သည်",
-  "Receipt draft expired or already used. Import again.":
-    "ပြေစာမူကြမ်း သက်တမ်းကုန်ပြီ သို့မဟုတ် သုံးပြီးဖြစ်သည်။ ပြန်တင်ပါ။",
+  "This import form is outdated. Import the receipt again.":
+    "ပြေစာပုံကို ပြန်တင်ပြီး အချက်အလက်ဖြည့်ပါ။",
   "Select a wallet matching the receipt provider":
     "ပြေစာနှင့်ကိုက်ညီသော ငွေဝန်ဆောင်မှုအကောင့်ကို ရွေးပါ",
   "Review the receipt and confirm all details first":

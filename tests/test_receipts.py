@@ -132,7 +132,11 @@ class ReceiptTests(LedgerFixture):
             200000,
             1,
             customer=extracted["customer"],
-            receipt_import_id=draft["import_id"],
+            receipt={
+                key: draft[key]
+                for key in ("provider", "receipt_format", "masked_phone")
+                if key in draft
+            },
             receipt_confirmed=True,
         )
         self.assertEqual(code, 200)
@@ -181,7 +185,11 @@ class ReceiptTests(LedgerFixture):
         self.assertEqual(self.counts(), before)
         extras = dict(
             provider_transaction_id=extracted["provider_transaction_id"],
-            receipt_import_id=draft["import_id"],
+            receipt={
+                key: draft[key]
+                for key in ("provider", "receipt_format", "masked_phone")
+                if key in draft
+            },
             receipt_time=extracted["receipt_time"],
         )
         self.assertEqual(
@@ -216,7 +224,11 @@ class ReceiptTests(LedgerFixture):
                 "cash_out",
                 50000,
                 1,
-                receipt_import_id=draft["import_id"],
+                receipt={
+                    key: draft[key]
+                    for key in ("provider", "receipt_format", "masked_phone")
+                    if key in draft
+                },
                 receipt_confirmed=True,
             )[0],
             400,

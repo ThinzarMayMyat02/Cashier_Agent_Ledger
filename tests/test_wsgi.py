@@ -143,8 +143,13 @@ class WSGITests(unittest.TestCase):
             json.loads(self.request("/api/state")["body"])["cash"], before["cash"]
         )
         extra = dict(
-            receipt_import_id=draft["import_id"],
+            receipt={
+                key: draft[key]
+                for key in ("provider", "receipt_format", "masked_phone")
+                if key in draft
+            },
             receipt_confirmed=True,
+            provider_transaction_id="WSGI-RECEIPT-123",
             provider_commission=9,
             provider_fee=0,
         )

@@ -1,11 +1,12 @@
 // JSON requests share authentication handling and preserve server error messages.
 import { auth } from "../features/auth.js";
 
-export async function api(path, data) {
+export async function api(path, data, signal) {
   const response = await fetch(
     "/api/" + path,
     data
       ? {
+          signal,
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),

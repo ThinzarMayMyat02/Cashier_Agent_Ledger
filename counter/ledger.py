@@ -6,8 +6,8 @@ from .closing import require_open_day
 from .fees import whole_amount, prepare_posting_amounts
 from .queries import get_shop_state
 from .receipts.posting import (
-    load_reviewed_draft,
-    masked_phone_from_draft,
+    validate_receipt_review,
+    validate_masked_phone,
     validate_provider_adjustments,
 )
 
@@ -34,7 +34,7 @@ def post_entry(connection, user, data):
     provider_id = str(data.get("provider_transaction_id", "")).strip()
     if len(provider_id) > 80 or any(ord(character) < 32 for character in provider_id):
         raise ValueError("Invalid provider transaction ID")
-    extracted = load_reviewed_draft(connection, user, data, account, entry_type)
+    extracted = validate_receipt_review(data, account, entry_type)
     _ensure_unique_provider_reference(connection, account_id, provider_id)
 
     posting = prepare_posting_amounts(data, entry_type, amount, account_id)
@@ -66,9 +66,8 @@ def post_entry(connection, user, data):
         provider_commission=adjustments.commission,
         provider_fee=adjustments.fee,
         receipt_format=extracted.get("receipt_format"),
-        customer_phone_masked=masked_phone_from_draft(extracted),
+        customer_phone_masked=validate_masked_phone(extracted),
         provider_transaction_id=provider_id or None,
-        receipt_import_id=data.get("receipt_import_id"),
         receipt_time=receipt_time,
         suggested_fee=posting.suggested_fee,
         collected_fee=posting.collected_fee,
@@ -130,23 +129,18 @@ def _ensure_sufficient_balances(state, account_id, posting):
 
 
 def _save_entry(connection, record):
-    """Persist all audit fields and consume the draft in the same transaction."""
+    """Persist the confirmed transaction and monetary audit fields only."""
     connection.execute(
         """INSERT INTO entries (
             id,type,account_id,amount,fee,cash_delta,wallet_delta,phone,customer,note,staff,
             accounting_rule,provider_commission,provider_fee,receipt_format,customer_phone_masked,
-            provider_transaction_id,receipt_import_id,receipt_time,suggested_fee,collected_fee,
+            provider_transaction_id,receipt_time,suggested_fee,collected_fee,
             fee_mode,override_reason,business_date
         ) VALUES (
             :id,:type,:account_id,:amount,:fee,:cash_delta,:wallet_delta,:phone,:customer,:note,:staff,
             :accounting_rule,:provider_commission,:provider_fee,:receipt_format,:customer_phone_masked,
-            :provider_transaction_id,:receipt_import_id,:receipt_time,:suggested_fee,:collected_fee,
+            :provider_transaction_id,:receipt_time,:suggested_fee,:collected_fee,
             :fee_mode,:override_reason,:business_date
         )""",
         record,
     )
-    if record["receipt_import_id"]:
-        connection.execute(
-            "UPDATE receipt_imports SET entry_id=? WHERE id=?",
-            (record["id"], record["receipt_import_id"]),
-        )

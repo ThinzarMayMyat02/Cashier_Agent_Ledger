@@ -20,7 +20,12 @@ export function select(label, name, options) {
 </div>`;
 }
 
-export function openForm(title, body, onSave) {
+export function openForm(
+  title,
+  body,
+  onSave,
+  { successMessage = "Saved successfully" } = {},
+) {
   const m = $("#modal");
   m.innerHTML = `<div class="sectionhead">
 <h2>${title}</h2>
@@ -39,11 +44,13 @@ export function openForm(title, body, onSave) {
     e.preventDefault();
     $("#save").disabled = true;
     try {
-      await onSave(plainMoneyFormData(e.target));
+      const result = await onSave(plainMoneyFormData(e.target));
+      if (result === false || !m.open || !e.target.isConnected) return;
       m.close();
       render();
-      toast("Saved successfully");
+      if (successMessage) toast(successMessage);
     } catch (err) {
+      if (!m.open || !e.target.isConnected) return;
       $("#form .error").textContent = err.message;
       $("#save").disabled = false;
     }

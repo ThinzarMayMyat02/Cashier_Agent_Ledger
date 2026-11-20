@@ -117,7 +117,7 @@ async function main() {
         provider_fee: 0,
         receipt_wallet_delta: -29991,
         previewUrl: "",
-        import_id: "unposted-fixture",
+
         transaction_type: "cash_in",
       });
     });
