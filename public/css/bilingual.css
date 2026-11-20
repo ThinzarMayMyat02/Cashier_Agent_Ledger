@@ -1,0 +1,245 @@
+/* Shared bilingual controls and icon geometry. */
+
+:root {
+  font-size: 16px;
+  --muted: #53665c;
+}
+body {
+  line-height: 1.65;
+}
+h1,
+h2,
+.wallet strong,
+.statvalue {
+  font-family:
+    "Manrope", "Myanmar Text", "Noto Sans Myanmar", system-ui, sans-serif;
+  letter-spacing: normal;
+}
+:lang(my) {
+  font-family: "Myanmar Text", "Noto Sans Myanmar", system-ui, sans-serif;
+  line-height: 1.85;
+}
+h1 {
+  font-size: 24px;
+}
+h2 {
+  font-size: 18px;
+}
+label,
+.field small,
+.error,
+.feeinfo,
+.filters,
+.closingrow small {
+  font-size: 14px;
+}
+button,
+input,
+select {
+  min-height: 48px;
+}
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+.nav button {
+  justify-content: flex-start;
+}
+.nav button span {
+  display: inline-flex;
+  align-items: center;
+}
+.ui-icon {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.wallet h3 {
+  font-size: 14px;
+}
+.wallet p,
+.wallet small,
+.statlabel,
+.statfoot,
+.sectionhead p,
+.activity,
+.infobox p,
+.badge,
+.empty,
+.status,
+table,
+th,
+.quickgrid button {
+  font-size: 15px;
+}
+.statvalue {
+  font-size: 25px;
+}
+.statvalue small {
+  font-size: 14px;
+}
+.wallet strong {
+  font-size: 21px;
+}
+.walletlist {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+.statlabel {
+  gap: 12px;
+}
+.statfoot {
+  line-height: 1.6;
+}
+.stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.topbar {
+  height: auto;
+  min-height: 78px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.language-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 18px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  justify-content: flex-end;
+}
+.language-control select {
+  width: auto;
+  min-width: 140px;
+  color: var(--green);
+  font-size: 16px;
+  background: #f5faf7;
+}
+dialog .language-control {
+  padding: 0 0 12px;
+  margin-bottom: 14px;
+}
+.quickgrid button {
+  display: block;
+  text-align: left;
+}
+.quickgrid b .ui-icon {
+  width: 26px;
+  height: 26px;
+}
+.infobox h3 {
+  font-size: 17px;
+}
+.footer {
+  font-size: 13px;
+}
+:focus-visible {
+  outline: 3px solid #217950;
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .nav button span {
+    display: inline-flex;
+  }
+  .nav button {
+    font-size: 15px;
+  }
+  .accountgrid,
+  .walletlist {
+    grid-template-columns: 1fr;
+  }
+  .content {
+    padding: 20px 14px;
+  }
+  .topbar {
+    padding: 12px 16px;
+  }
+  .closingrow {
+    grid-template-columns: 1fr;
+  }
+  .heading .actions button {
+    flex: auto;
+  }
+  .language-control {
+    padding: 8px 14px;
+  }
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .statvalue {
+    font-size: 22px;
+  }
+  .statvalue small {
+    display: block;
+  }
+  .auth {
+    padding: 24px;
+  }
+  .columns {
+    min-width: 0;
+  }
+}
+@media (max-width: 390px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .sectionhead {
+    align-items: flex-start;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .sectionhead > div {
+    flex: 1 1 190px;
+  }
+  .sectionhead > .quiet {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .nav {
+    scrollbar-width: thin;
+  }
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 390px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+.receipt-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  margin: 16px auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.receipt-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 20px 0;
+}
+.receipt-confirm input {
+  width: 24px;
+  min-width: 24px;
+  min-height: 24px;
+}
+details pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 240px;
+  overflow: auto;
+  font-size: 14px;
+}

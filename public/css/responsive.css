@@ -1,0 +1,136 @@
+@media (min-width: 1450px) {
+  .walletlist {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+@media (max-width: 1150px) {
+  .shell {
+    grid-template-columns: 190px 1fr;
+  }
+  .sidebar {
+    padding: 25px 12px;
+  }
+  .content {
+    padding: 25px;
+  }
+  .topbar {
+    padding: 0 25px;
+  }
+  .columns {
+    grid-template-columns: 1fr;
+  }
+  .rightpanel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .rightpanel .panelgap {
+    margin: 0;
+  }
+  .walletlist {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .stats {
+    gap: 10px;
+  }
+  .statvalue {
+    font-size: 22px;
+  }
+}
+@media (max-width: 760px) {
+  .shell {
+    display: block;
+  }
+  .sidebar {
+    position: static;
+    height: auto;
+    padding: 15px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .sidebar .brand {
+    font-size: 22px;
+  }
+  .subbrand,
+  .navlabel,
+  .sidebottom {
+    display: none;
+  }
+  .nav {
+    display: flex;
+    overflow: auto;
+    margin-top: 18px;
+    gap: 3px;
+  }
+  .nav button {
+    white-space: nowrap;
+    font-size: 12px;
+    padding: 10px;
+  }
+  .nav button span {
+    display: none;
+  }
+  .topbar {
+    height: 53px;
+    padding: 0 18px;
+    font-size: 11px;
+  }
+  .content {
+    padding: 23px 16px;
+  }
+  .heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  h1 {
+    font-size: 25px;
+  }
+  .stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .card {
+    padding: 17px;
+  }
+  .statvalue {
+    font-size: 23px;
+  }
+  .walletlist,
+  .accountgrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .rightpanel {
+    display: block;
+  }
+  .rightpanel .panelgap {
+    margin-top: 20px;
+  }
+  .formrow {
+    grid-template-columns: 1fr;
+  }
+  .filters select {
+    flex: 1;
+  }
+  .auth {
+    margin: 8vh 16px;
+  }
+  .heading .actions {
+    width: 100%;
+  }
+  .heading .actions button {
+    flex: 1;
+  }
+}
+
+/* Let populated tables scroll inside cards instead of widening the page. */
+.columns > * {
+  min-width: 0;
+}
+.tablewrap {
+  max-width: 100%;
+}
+@media (max-width: 760px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

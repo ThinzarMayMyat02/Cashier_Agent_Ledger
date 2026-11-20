@@ -1,0 +1,10 @@
+{
+  "name": "counter-browser-checks",
+  "private": true,
+  "scripts": {
+    "test:money": "node money-input.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.65.1"
+  }
+}
