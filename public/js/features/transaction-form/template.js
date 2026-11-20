@@ -1,5 +1,6 @@
 // Field markup only. Keep input names aligned with the REST command contract.
 import { field, select } from "../../components/forms.js";
+import { splitReceiptTime } from "./receipt-time.js";
 import { money, esc } from "../../core/format.js";
 
 export function renderTransactionFields({
@@ -9,6 +10,7 @@ export function renderTransactionFields({
   walletAccounts,
   customerSuggestions,
 }) {
+  const receiptTime = splitReceiptTime(receiptExtraction?.receipt_time);
   const walletOptions =
     (isCustomerTransaction ? "" : '<option value="">Shop cash</option>') +
     walletAccounts
@@ -59,13 +61,21 @@ export function renderTransactionFields({
           receiptExtraction?.provider_transaction_id || "",
           'maxlength="80"',
         ) +
+        '<div class="formrow">' +
         field(
-          "Receipt time (optional)",
-          "receipt_time",
-          "text",
-          receiptExtraction?.receipt_time || "",
-          'maxlength="80"',
-        )
+          "Receipt date (optional)",
+          "receipt_date",
+          "date",
+          receiptTime.date,
+        ) +
+        field(
+          "Receipt time · Myanmar time (optional)",
+          "receipt_clock",
+          "time",
+          receiptTime.time,
+          'step="1"',
+        ) +
+        "</div>"
       : "") +
     field(
       receiptExtraction?.receipt_format === "wave_channel"

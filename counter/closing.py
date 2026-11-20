@@ -13,7 +13,7 @@ def require_open_day(connection):
 
 
 def close_day(connection, user, data):
-    """Save a matching close within the caller-owned serialized transaction."""
+    """Save a reviewed reconciliation within the caller-owned serialized transaction."""
     require_open_day(connection)
     snapshot = get_shop_state(connection, user)
     counts = data.get("counts", {})
@@ -21,12 +21,24 @@ def close_day(connection, user, data):
         "cash": snapshot["cash"],
         **{str(a["id"]): a["balance"] for a in snapshot["accounts"]},
     }
-    if set(counts) != set(expected) or any(
-        (type(v) != int or v < 0 for v in counts.values())
+    if (
+        not isinstance(counts, dict)
+        or set(counts) != set(expected)
+        or any((type(v) != int or v < 0 for v in counts.values()))
     ):
         raise ValueError("Enter a nonnegative count for cash and every wallet")
-    if counts != expected:
+    mode = data.get("closing_mode", "strict")
+    if mode not in ("strict", "allow_variance"):
+        raise ValueError("Invalid closing mode")
+    note_value = data.get("note", "")
+    note = note_value.strip() if isinstance(note_value, str) else ""
+    if len(note) > 500:
+        raise ValueError("Closing note must be 500 characters or fewer")
+    has_difference = counts != expected
+    if has_difference and mode == "strict":
         raise ValueError("Resolve all balance differences before closing")
+    if has_difference and not note:
+        raise ValueError("Add a note explaining the closing differences")
     if any(
         (e["fee_review_required"] and (not e["reversed"]) for e in snapshot["entries"])
     ):
@@ -39,7 +51,12 @@ def close_day(connection, user, data):
                 {
                     "expected": expected,
                     "counted": counts,
-                    "note": str(data.get("note", ""))[:500],
+                    "note": note,
+                    "closing_mode": mode,
+                    "status": "variance" if has_difference else "matched",
+                    "differences": {
+                        key: counts[key] - value for key, value in expected.items()
+                    },
                 }
             ),
             clock.business_day(),

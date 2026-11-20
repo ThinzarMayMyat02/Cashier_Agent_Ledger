@@ -1,5 +1,31 @@
 // English interface keys and Myanmar text. User data is never a translation key.
 export const interfaceTranslations = {
+  "Choose how to save your closing. Saving locks financial writes until the next Myanmar business day.":
+    "နေ့ပိတ်သိမ်းမည့်ပုံစံကို ရွေးပါ။ သိမ်းပြီးလျှင် နောက်နေ့အထိ ငွေစာရင်းအသစ် သွင်းမရပါ။",
+  "Allow differences with a required note": "စာရင်းမကိုက်လည်း Note ဖြည့်ပြီး သိမ်းမည်",
+  "Save only when balances match": "စာရင်းကိုက်မှ သိမ်းမည်",
+  "Save differences with a note": "ကွာဟချက်အတွက် Note ဖြည့်ပြီး သိမ်းမည်",
+  "Add a note explaining the closing differences": "စာရင်းကွာဟချက်အတွက် Note ဖြည့်ပါ",
+  "Closing note must be 500 characters or fewer":
+    "နေ့ပိတ်မှတ်ချက်ကို စာလုံးရေ ၅၀၀ အတွင်း ဖြည့်ပါ",
+  Matched: "စာရင်းကိုက်သည်",
+  "With differences": "စာရင်းကွာဟချက်ရှိသည်",
+
+  "Closing record": "နေ့ပိတ်စာရင်း",
+  "Load more": "ထပ်ကြည့်မည်",
+  "Choose a valid closing date": "မှန်ကန်သော နေ့ပိတ်ရက်စွဲ ရွေးပါ",
+
+  "Receipt date (optional)": "ပြေစာရက်စွဲ (မဖြည့်လည်းရ)",
+  "Receipt time · Myanmar time (optional)":
+    "ပြေစာအချိန် · မြန်မာစံတော်ချိန် (မဖြည့်လည်းရ)",
+  "Choose a receipt date before the time": "အချိန်မရွေးမီ ပြေစာရက်စွဲ ရွေးပါ",
+  "Closing date": "နေ့ပိတ်ရက်စွဲ",
+  "View closing record": "နေ့ပိတ်စာရင်း ကြည့်မည်",
+  "Recorded at": "စာရင်းသွင်းချိန်",
+  "Expected balance": "ရှိရမည့်လက်ကျန်",
+  "No closing counts for this date.": "ဤရက်အတွက် နေ့ပိတ်စာရင်းမရှိပါ။",
+  "Showing up to 30 recent closing records.": "နောက်ဆုံးနေ့ပိတ်စာရင်း ၃၀ ခုအထိ ပြထားသည်။",
+
   "Customer name": "ဖောက်သည်အမည်",
   "Customer name is required": "ဖောက်သည်အမည် ဖြည့်ရန်လိုအပ်သည်",
   "Enter a valid customer name up to 100 characters":

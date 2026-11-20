@@ -9,6 +9,7 @@ from urllib.parse import urlsplit, parse_qs
 from . import auth, database
 from .accounts import save_account
 from .closing import close_day
+from .closing_history import closing_history
 from .config import PUBLIC_ROOT
 from .ledger import post_entry
 from .queries import get_shop_state
@@ -49,6 +50,24 @@ class Handler(BaseHTTPRequestHandler):
         return auth.current_user(connection, self.headers.get("Cookie"))
 
     def do_GET(self):
+        if urlsplit(self.path).path == "/api/closings":
+            with database.connect() as connection:
+                connection.execute("BEGIN")
+                if not self.user(connection):
+                    self.send({"error": "Please sign in"}, 401)
+                    return
+                query = parse_qs(urlsplit(self.path).query)
+                try:
+                    self.send(
+                        closing_history(
+                            connection,
+                            query.get("date", [""])[0],
+                            query.get("page", ["1"])[0],
+                        )
+                    )
+                except ValueError as error:
+                    self.send({"error": str(error)}, 400)
+            return
         if urlsplit(self.path).path == "/api/reports/daily":
             with database.connect() as connection:
                 connection.execute("BEGIN")

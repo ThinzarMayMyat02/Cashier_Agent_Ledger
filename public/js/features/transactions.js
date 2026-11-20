@@ -6,6 +6,7 @@ import { $, title } from "../core/format.js";
 import { store } from "../core/store.js";
 import { renderTransactionFields } from "./transaction-form/template.js";
 import { populateReceiptFields } from "./transaction-form/receipt-review.js";
+import { joinReceiptTime } from "./transaction-form/receipt-time.js";
 import { bindTransactionPreview } from "./transaction-form/preview.js";
 
 export function entryForm(entryType, receiptExtraction = null) {
@@ -78,6 +79,12 @@ function prepareEntryCommand(
     amount: Number(formData.amount),
   };
   if (isCustomerTransaction) {
+    command.receipt_time = joinReceiptTime(
+      command.receipt_date,
+      command.receipt_clock,
+    );
+    delete command.receipt_date;
+    delete command.receipt_clock;
     command.customer = command.customer.trim();
     if (!command.customer) throw Error("Customer name is required");
     command.fee = Number(command.fee);

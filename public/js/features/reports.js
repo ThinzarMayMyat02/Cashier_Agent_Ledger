@@ -134,6 +134,8 @@ export function mountClosingExport() {
         "Wallet account",
         "Date",
         "Status",
+        "Closing status",
+        "Closing note",
         ...WALLET_REPORT_COLUMNS.map(([, label]) => label),
         "Counted balance",
         "Difference",
@@ -145,6 +147,15 @@ export function mountClosingExport() {
           account.name,
           report.business_date,
           report.closing ? "CLOSED" : "OPEN",
+          report.closing
+            ? Object.keys(report.closing.expected).every(
+                (key) =>
+                  report.closing.expected[key] === report.closing.counted[key],
+              )
+              ? "MATCHED"
+              : "WITH_DIFFERENCES"
+            : "",
+          report.closing?.note || "",
           ...WALLET_REPORT_COLUMNS.map(([key]) => money(account[key])),
           counted == null ? "" : money(counted),
           counted == null || expected == null ? "" : money(counted - expected),
@@ -170,6 +181,15 @@ export function mountClosingExport() {
         "TOTAL",
         report.business_date,
         report.closing ? "CLOSED" : "OPEN",
+        report.closing
+          ? Object.keys(report.closing.expected).every(
+              (key) =>
+                report.closing.expected[key] === report.closing.counted[key],
+            )
+            ? "MATCHED"
+            : "WITH_DIFFERENCES"
+          : "",
+        report.closing?.note || "",
         ...WALLET_REPORT_COLUMNS.map(([key]) => money(report.totals[key])),
         complete ? money(countedTotal) : "",
         complete ? money(countedTotal - expectedTotal) : "",

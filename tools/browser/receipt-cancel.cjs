@@ -15,7 +15,7 @@ const assert = require("node:assert/strict");
       true,
       "Use a new temporary ledger",
     );
-    await page.locator("body > .language-control select").selectOption("en");
+    await page.locator(".auth .language-picker").selectOption("en");
     await page.locator("#name").fill("Receipt Test Owner");
     await page.locator("#password").fill("fictional-password-123");
     await page.locator("#authform button").click();

@@ -71,6 +71,7 @@ export function render() {
 <span>Workspace <span class="muted"> / ${nav.find((x) => x[0] === store.page)?.[2] || "Overview"}</span>
 </span>
 <div class="actions">
+<span data-language-slot></span>
 <span class="status">
 <i class="dot">
 </i> ${esc(store.data.user.name)}</span>

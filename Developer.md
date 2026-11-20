@@ -233,7 +233,7 @@ Customer Name is trimmed, required for Cash In/Out, limited to 100 characters an
 - `reports.daily_report(connection, business_date, account_id)` filters by Asia/Yangon posting date and optional wallet, including archived wallets when relevant.
 - Opening balance is account legacy opening plus earlier wallet deltas. Closing balance is opening plus all selected-day wallet deltas, including funding, expenses and reversals. Principal/fee/commission totals include dated reversal negatives.
 - `reports.js` shares `WALLET_REPORT_COLUMNS` across the on-screen table and CSV. Export lives only on Daily Closing. The CSV includes filtered accounts, a TOTAL row, separate provider amounts, and saved counts/differences when available. Open-day counts stay blank.
-- `closing.close_day()` requires actual counts for cash and every wallet to match current balances. It saves a snapshot and locks further financial writes for that Myanmar day. Historical snapshots without business dates remain observations.
+- `closing.close_day()` requires valid actual counts for cash and every wallet. Strict mode requires them to match; allow_variance mode permits differences with a required note. It saves a snapshot and locks further financial writes for that Myanmar day. Historical snapshots without business dates remain observations.
 
 ## 8. Backend entry-point index
 
@@ -312,3 +312,13 @@ Use `python tools/manage.py init-owner --name ...` before exposing a fresh ledge
 `.github/workflows/linux-tests.yml` runs the full suite and native OCR readiness on Ubuntu/Python 3.12 for pushes/PRs, using fictional temporary databases. No customer receipts or credentials are sent to CI.
 
 Run `COUNTER_TEST_URL=http://127.0.0.1:PORT npm run test:receipt-cancel --prefix tools/browser` against a new temporary ledger to verify cancellation during/after OCR, preview revocation, no late reopening and no financial writes.
+
+
+## Local interface updates
+
+Receipt date and time use separate native date/time inputs. OCR timestamps are split without browser timezone conversion; a date-only receipt keeps an empty time. Submission joins the fields into the established receipt_time string. Closing history uses GET /api/closings?date=YYYY-MM-DD&page=N, authenticated for owner/staff. Each page contains 10 records and a total count; selecting a date searches the full table, including legacy records dated in Asia/Yangon. The default recent list has bounded scroll height and Load more. Selecting a row opens a read-only modal containing saved expected/counted/difference/note data. No historical financial figures are recalculated. Language selection lives in the workspace header, login tools and dialog heading; switching language preserves entered values and expanded closing details.
+
+
+## Closing modes
+
+POST /api/closing accepts closing_mode=strict (default) or allow_variance. Strict rejects unequal counts. Allow-variance requires a trimmed nonblank note (maximum 500 characters) when any count differs. Both modes require valid counts for every source, preserve the existing fee-review guard and lock the business day after saving. Snapshots store expected, counted, differences, note, closing_mode and actual status (matched/variance). They never alter ledger entries or balances. Matching counts in allow-variance mode still receive matched status. History/modal status is derived from saved counts for compatibility with old snapshots; closing CSV keeps CLOSED/OPEN and adds Closing status and Closing note columns. Both owner/staff retain their existing closing permission.

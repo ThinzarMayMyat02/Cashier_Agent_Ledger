@@ -20,7 +20,7 @@ async function main() {
       true,
       "Refusing an initialized ledger. Use a new temporary database.",
     );
-    await page.locator("body > .language-control select").selectOption("en");
+    await page.locator(".auth .language-picker").selectOption("en");
     await page.locator("#name").fill("Browser Test Owner");
     await page.locator("#password").fill("Fictional-test-password-123");
     await page.locator("#authform button").click();

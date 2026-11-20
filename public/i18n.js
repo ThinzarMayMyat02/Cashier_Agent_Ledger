@@ -74,6 +74,10 @@ function translated(text) {
 let languageObserver;
 function applyCounterLanguage() {
   languageObserver?.disconnect();
+  document.querySelectorAll("[data-language-slot]").forEach((slot) => {
+    if (!slot.querySelector(".language-control"))
+      slot.append(languageControl());
+  });
   // User-entered names, notes, numbers and account labels never become translation keys.
   const skip =
     "script,style,svg,[data-no-i18n],.brand,.wallet h3,.wallet p,.userrow .avatar,.userrow div,.status,.closingrow b,td:first-child b,td:nth-child(3),td:nth-child(9)";
@@ -136,12 +140,17 @@ function languageControl() {
   };
   return label;
 }
-document.body.prepend(languageControl());
+
 const dialog = document.querySelector("#modal");
 // A modal has its own selector because background controls are inert while it is open.
 new MutationObserver(() => {
   if (dialog.open && !dialog.querySelector(".language-control"))
-    dialog.prepend(languageControl());
+    dialog
+      .querySelector(".sectionhead")
+      ?.insertBefore(
+        languageControl(),
+        dialog.querySelector(".sectionhead button"),
+      );
 }).observe(dialog, {
   attributes: true,
   attributeFilter: ["open"],

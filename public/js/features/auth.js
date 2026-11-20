@@ -9,6 +9,7 @@ import { load } from "../shell.js";
 export function auth(setup = false) {
   store.data = null;
   $("#app").innerHTML = `<div class="auth">
+<div class="auth-tools" data-language-slot></div>
 <div class="brand">
 <span class="mark">↗</span>counter<span style="color:#96aa9c">.</span>
 </div>
